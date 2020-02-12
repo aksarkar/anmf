@@ -1,6 +1,6 @@
 import scipy.sparse as ss
 import torch
-import torch.data.utils as td
+import torch.utils.data as td
 
 class ExprDataset(td.Dataset):
   """Specialized dataset for sparse count matrix and scale factors"""

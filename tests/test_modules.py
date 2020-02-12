@@ -12,7 +12,7 @@ def test_Encoder():
   assert l.shape == (1, 10)
   assert (l >= 0).all()
   assert (l <= 1).all()
-  assert np.isclose(l.sum(), 1, rtol=0, atol=1e-7)
+  assert np.isclose(l.sum(), 1, rtol=0, atol=1e-6)
 
 def test_Encoder_minibatch():
   enc = anmf.modules.Encoder(input_dim=100, hidden_dim=50, output_dim=10)
