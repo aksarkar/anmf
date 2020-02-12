@@ -1,0 +1,5 @@
+*.egg-info/
+.cache/
+.pytest_cache/
+TAGS
+__pycache__/
