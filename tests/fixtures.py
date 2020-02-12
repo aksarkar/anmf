@@ -1,7 +1,36 @@
+import anmf
 import numpy as np
 import pytest
 import scipy.special as sp
 import scipy.stats as st
+import torch.utils.data as td
+
+def _simulate_pois():
+  n = 500
+  p = 256
+  k = 3
+  np.random.seed(0)
+  l = np.random.lognormal(sigma=0.5, size=(n, k))
+  f = np.random.lognormal(sigma=0.5, size=(p, k))
+  lam = l @ f.T
+  x = np.random.poisson(lam=lam)
+  llik = st.poisson(mu=lam).logpmf(x).sum()
+  return x, llik
+
+@pytest.fixture
+def simulate_pois():
+  return _simulate_pois()
+
+@pytest.fixture
+def simulate_pois_dataloader():
+  x, llik = _simulate_pois()
+  n, p = x.shape
+  s = x.sum(axis=1)
+  b = 64
+  data = anmf.dataset.ExprDataset(x, s)
+  collate_fn = getattr(data, 'collate_fn', td.dataloader.default_collate)
+  data = td.DataLoader(data, batch_size=b, collate_fn=collate_fn)
+  return data, n, p, b, llik
 
 def _simulate_gamma():
   n = 500

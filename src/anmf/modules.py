@@ -19,23 +19,23 @@ class Pois(torch.nn.Module):
   """Decoder p(x_ij | l_ij, F) ~ Poisson(s_i x_ij F)"""
   def __init__(self, input_dim, output_dim):
     super().__init__()
-    self.factors = torch.nn.Parameter(
-      torch.nn.functional.softmax(
-        torch.ones(size=[input_dim, output_dim]), dim=1))
+    self.logit_f = torch.nn.Parameter(torch.ones(size=[input_dim, output_dim]))
 
   def forward(self, x):
-    return torch.matmul(x, self.factors)
+    return torch.matmul(x, torch.nn.functional.softmax(self.logit_f, dim=1))
 
 class ANMF(torch.nn.Module):
   """Amortized NMF"""
-  def __init__(self, input_dim, hidden_dim, latent_dim):
+  def __init__(self, input_dim, hidden_dim=128, latent_dim=10):
+    super().__init__()
     self.encoder = Encoder(input_dim, hidden_dim, latent_dim)
     self.decoder = Pois(latent_dim, input_dim)
 
   def loss(self, x, s):
     """Return the negative log likelihood of x distributed as Poisson"""
-    mean = self.encoder.forward(x)
-    return -x * torch.log(s * mean) + s * mean + torch.lgamma(x + 1)
+    mean = self.decoder.forward(self.encoder.forward(x))
+    s = s.reshape(-1, 1)
+    return -(x * torch.log(s * mean) - s * mean - torch.lgamma(x + 1)).sum()
 
   def fit(self, data, max_epochs, trace=False, verbose=False, **kwargs):
     """Fit the model
@@ -58,8 +58,17 @@ class ANMF(torch.nn.Module):
           raise RuntimeError('nan loss')
         loss.backward()
         opt.step()
-        if verbose and not epoch % 10:
-          print(f'[epoch={epoch}] elbo={-loss}')
         if trace:
           self.trace.append(loss.detach().cpu().numpy())
+      if verbose:
+        print(f'[epoch={epoch}] loss={loss}')
     return self
+
+  @torch.no_grad()
+  def denoise(self, x):
+    if torch.cuda.is_available() and not x.is_cuda:
+      x = x.cuda()
+    lam = self.decoder.forward(self.encoder.forward(x))
+    if torch.cuda.is_available():
+      lam = lam.cpu()
+    return lam.numpy()

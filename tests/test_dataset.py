@@ -1,4 +1,4 @@
-import anmf.dataset
+import anmf
 import scipy.sparse as ss
 import torch
 import torch.utils.data as td
