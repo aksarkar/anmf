@@ -8,8 +8,9 @@ class Encoder(torch.nn.Module):
     self.net = torch.nn.Sequential(
       torch.nn.Linear(input_dim, hidden_dim),
       torch.nn.ReLU(),
+      torch.nn.BatchNorm1d(hidden_dim),
       torch.nn.Linear(hidden_dim, output_dim),
-      torch.nn.Softmax(dim=1),
+      torch.nn.Softplus(),
     )
 
   def forward(self, x):
@@ -19,10 +20,11 @@ class Pois(torch.nn.Module):
   """Decoder p(x_ij | l_ij, F) ~ Poisson(s_i x_ij F)"""
   def __init__(self, input_dim, output_dim):
     super().__init__()
-    self.logit_f = torch.nn.Parameter(torch.ones(size=[input_dim, output_dim]))
+    self._f = torch.nn.Parameter(torch.ones(size=[input_dim, output_dim]))
 
   def forward(self, x):
-    return torch.matmul(x, torch.nn.functional.softmax(self.logit_f, dim=1))
+    """Return lambda_.j = (LF)_.j"""
+    return torch.matmul(x, torch.nn.functional.softplus(self._f))
 
 class ANMF(torch.nn.Module):
   """Amortized NMF"""

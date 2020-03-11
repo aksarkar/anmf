@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 import scipy.special as sp
 import scipy.stats as st
+import torch
 import torch.utils.data as td
 
 def _simulate_pois():
@@ -62,3 +63,5 @@ def simulate_point_gamma():
   llik_nonzero = np.log(1 - pi0) + F.logpmf(y)
   llik = np.where(y < 1, np.log(pi0 + np.exp(llik_nonzero)), llik_nonzero).sum()
   return y, s, log_mu, log_phi, logodds, llik
+
+require_cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason='requires CUDA')
