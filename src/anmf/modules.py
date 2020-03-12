@@ -74,3 +74,17 @@ class ANMF(torch.nn.Module):
     if torch.cuda.is_available():
       lam = lam.cpu()
     return lam.numpy()
+
+  @torch.no_grad()
+  def loadings(self, x):
+    l = self.encoder.forward(x)
+    if torch.cuda.is_available():
+      l = l.cpu()
+    return l.numpy()
+
+  @torch.no_grad()
+  def factors(self):
+    f = torch.nn.functional.softplus(self.decoder._f)
+    if torch.cuda.is_available():
+      f = f.cpu()
+    return f.numpy()
