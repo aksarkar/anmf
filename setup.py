@@ -3,7 +3,7 @@ import setuptools
 setuptools.setup(
   name='anmf',
   description='Amortized NMF',
-  version='0.0',
+  version='0.1',
   url='https://www.github.com/aksarkar/anmf',
   author='Abhishek Sarkar',
   author_email='aksarkar@uchicago.edu',
