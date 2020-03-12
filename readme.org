@@ -6,9 +6,7 @@
 
   The key advances are: (1) the use of amortized inference, which allows the
   model to be fit on a GPU using minibatch SGD; (2) support for sparse
-  matrices, which allows the entire data matrix to be stored on GPU memory; (3)
-  by default projection of loadings/factors onto the simplex, allowing
-  interpretation as a topic model.
+  matrices, which allows the entire data matrix to be stored on GPU memory.
 
 ** Installation
 
@@ -21,18 +19,18 @@
    #+BEGIN_SRC ipython :eval never
      import anmf
      import scipy.sparse as ss
+     import torch.data.utils as td
 
      # This matrix has shape (593844, 16002) and is 99% sparse
      x = ss.load_npz('immune-cell-census.npz')
 
      # This automatically moves to the GPU if available
      data = anmf.ExprDataset(x)
+     loader = td.DataLoader(data, batch_size=32, collate_fn=data.collate_fn)
      model = anmf.ANMF(input_dim=x.shape[1], hidden_dim=128, latent_dim=10)
-     model.fit(data, max_epochs=10)
+     model.fit(loader, max_epochs=10)
 
      # In amortized inference, we learn a function from data to loadings
      l = model.loadings(x)
-
-     # After our normalization, factors are "topics" in the LDA sense
      f = model.factors
    #+END_SRC
