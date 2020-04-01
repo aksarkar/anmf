@@ -43,13 +43,19 @@ class GNMF(torch.nn.Module):
 
 class Encoder(torch.nn.Module):
   """Encoder l_i = h(x_i)"""
-  def __init__(self, input_dim, hidden_dim, output_dim):
+  def __init__(self, input_dim, hidden_dim, output_dim, dropout=0.1):
     super().__init__()
     self.net = torch.nn.Sequential(
       torch.nn.Linear(input_dim, hidden_dim),
-      torch.nn.ReLU(),
       torch.nn.BatchNorm1d(hidden_dim),
+      torch.nn.Dropout(p=dropout),
+      torch.nn.ReLU(),
+      torch.nn.Linear(hidden_dim, hidden_dim),
+      torch.nn.BatchNorm1d(hidden_dim),
+      torch.nn.Dropout(p=dropout),
+      torch.nn.ReLU(),
       torch.nn.Linear(hidden_dim, output_dim),
+      torch.nn.BatchNorm1d(output_dim),
       torch.nn.Softplus(),
     )
 
@@ -60,11 +66,11 @@ class Pois(torch.nn.Module):
   """Decoder p(x_ij | l_ij, F) ~ Poisson(s_i x_ij F)"""
   def __init__(self, input_dim, output_dim):
     super().__init__()
-    self._f = torch.nn.Parameter(torch.ones(size=[input_dim, output_dim]))
+    self._f = torch.nn.Parameter(torch.randn(size=[input_dim, output_dim]))
 
   def forward(self, x):
     """Return lambda_.j = (LF)_.j"""
-    return torch.matmul(x, torch.nn.functional.softplus(self._f))
+    return torch.matmul(x, _softplus(self._f))
 
 class ANMF(torch.nn.Module):
   """Amortized NMF"""
@@ -124,7 +130,7 @@ class ANMF(torch.nn.Module):
 
   @torch.no_grad()
   def factors(self):
-    f = torch.nn.functional.softplus(self.decoder._f)
+    f = _softplus(self.decoder._f)
     if torch.cuda.is_available():
       f = f.cpu()
     return f.numpy()
