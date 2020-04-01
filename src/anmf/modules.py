@@ -1,6 +1,46 @@
 """Amortized inference for NMF"""
 import torch
 
+_softplus = torch.nn.functional.softplus
+
+class GNMF(torch.nn.Module):
+  """NMF by gradient descent"""
+  def __init__(self, n, p, k):
+    super().__init__()
+    self._l = torch.nn.Parameter(torch.randn(size=[n, k]))
+    self._f = torch.nn.Parameter(torch.randn(size=[p, k]))
+
+  def loss(self, x):
+    lam = torch.matmul(_softplus(self._l), _softplus(self._f).T)
+    return -(x * torch.log(lam) - lam - torch.lgamma(x + 1)).sum()
+
+  def fit(self, data, max_epochs=1000, trace=False, verbose=False, **kwargs):
+    self.trace = []
+    opt = torch.optim.RMSprop(self.parameters(), **kwargs)
+    for epoch in range(max_epochs):
+      for x in data:
+        opt.zero_grad()
+        loss = self.loss(x)
+        if torch.isnan(loss):
+          raise RuntimeError('nan loss')
+        loss.backward()
+        opt.step()
+        if trace:
+          self.trace.append(loss.detach().cpu().numpy())
+      if verbose:
+        print(f'[epoch={epoch}] loss={loss}')
+    return self
+
+  @property
+  @torch.no_grad()
+  def loadings(self):
+    return _softplus(self._l).cpu().numpy()
+
+  @property
+  @torch.no_grad()
+  def factors(self):
+    return _softplus(self._f).cpu().numpy()
+
 class Encoder(torch.nn.Module):
   """Encoder l_i = h(x_i)"""
   def __init__(self, input_dim, hidden_dim, output_dim):
